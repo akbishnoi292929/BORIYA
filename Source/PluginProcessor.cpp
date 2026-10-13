@@ -16,6 +16,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout BoriyaAudioProcessor::create
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{ "MASTER_LEVEL", 1 }, "Level", 0.0f, 2.0f, 1.0f));
 
+    // Per-Layer Volume Parameters
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{ "LAYER1_VOL", 1 }, "Layer 1 Vol", 0.0f, 1.5f, 1.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{ "LAYER2_VOL", 1 }, "Layer 2 Vol", 0.0f, 1.5f, 1.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{ "LAYER3_VOL", 1 }, "Layer 3 Vol", 0.0f, 1.5f, 1.0f));
+
     return { params.begin(), params.end() };
 }
 
@@ -115,8 +123,6 @@ void BoriyaAudioProcessor::loadSampleIntoLayer(int layerIdx, const juce::File& a
         reader->read(&lyr.audioData, 0, static_cast<int>(reader->lengthInSamples), 0, true, true);
 
         lyr.isLoaded = true;
-        lyr.trackName = audioFile.getFileNameWithoutExtension().substring(0, 16);
-
         calculateTransientSlices(layerIdx);
 
         triggerMasterGeneration();
@@ -181,7 +187,7 @@ void BoriyaAudioProcessor::renderMelodicPreview()
     if (activeTrack == -1) return;
     const auto& lyr = layers[activeTrack];
 
-    juce::Random rng(1234);
+    juce::Random rng(juce::Time::currentTimeMillis() % 10000);
 
     for (int sIdx = 0; sIdx < 64; ++sIdx)
     {
@@ -214,7 +220,7 @@ void BoriyaAudioProcessor::renderMelodicPreview()
 
                     float sL = lyr.audioData.getSample(0, rInt);
                     float sR = (lyr.audioData.getNumChannels() > 1) ? lyr.audioData.getSample(1, rInt) : sL;
-                    float mono = (sL + sR) * 0.5f * step.velocity * env * 0.75f;
+                    float mono = (sL + sR) * 0.5f * step.velocity * env * 0.85f;
 
                     tempBuffer.addSample(0, writePos + i, mono * gL);
                     tempBuffer.addSample(1, writePos + i, mono * gR);
@@ -277,9 +283,9 @@ void BoriyaAudioProcessor::toggleLoopPlayback()
     currentPlayStep = 0;
 }
 
-juce::File BoriyaAudioProcessor::exportMixAsWav()
+juce::File BoriyaAudioProcessor::getExportWavFile()
 {
-    auto file = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("BORIYA_Loop.wav");
+    auto file = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("BORIYA_Theme.wav");
     renderMelodicPreview();
 
     juce::WavAudioFormat wavFmt;
@@ -290,7 +296,7 @@ juce::File BoriyaAudioProcessor::exportMixAsWav()
     return file;
 }
 
-juce::File BoriyaAudioProcessor::exportGrooveAsMidi()
+juce::File BoriyaAudioProcessor::getExportMidiFile()
 {
     auto file = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("BORIYA_Groove.mid");
 
@@ -329,11 +335,10 @@ juce::File BoriyaAudioProcessor::exportGrooveAsMidi()
     return file;
 }
 
-void BoriyaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void BoriyaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
 
-    // Direct Mute or Stop Handler: Clean Zero Output
     if (!playingState.load())
     {
         buffer.clear();
@@ -359,6 +364,11 @@ void BoriyaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     double sRate = (getSampleRate() > 0.0) ? getSampleRate() : 44100.0;
     double sSec = (60.0 / std::max(60, targetBpm)) * 0.25;
     stepDuration = static_cast<int>(sSec * sRate);
+
+    const float l1Vol = apvts.getRawParameterValue("LAYER1_VOL")->load();
+    const float l2Vol = apvts.getRawParameterValue("LAYER2_VOL")->load();
+    const float l3Vol = apvts.getRawParameterValue("LAYER3_VOL")->load();
+    const float vols[3] = { l1Vol, l2Vol, l3Vol };
 
     for (int s = 0; s < buffer.getNumSamples(); ++s)
     {
@@ -397,7 +407,7 @@ void BoriyaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                     float s0 = lyr.audioData.getSample(0, rPos);
                     float s1 = lyr.audioData.getSample(0, rPos + 1);
                     float frac = static_cast<float>(v.currentSample - rPos);
-                    float sampleVal = (s0 + frac * (s1 - s0)) * 0.70f;
+                    float sampleVal = (s0 + frac * (s1 - s0)) * 0.75f * vols[v.layerIndex];
 
                     buffer.addSample(0, s, sampleVal * v.panL);
                     buffer.addSample(1, s, sampleVal * v.panR);
