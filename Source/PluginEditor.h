@@ -48,7 +48,7 @@ public:
         setColour(juce::Label::outlineColourId, juce::Colour(0xffc59b27));
     }
 
-    void mouseDown(const juce::MouseEvent&) override
+    void mouseDrag(const juce::MouseEvent&) override
     {
         if (getFile != nullptr)
         {
@@ -56,7 +56,7 @@ public:
             if (file.existsAsFile())
             {
                 juce::DragAndDropContainer* ddc = juce::DragAndDropContainer::findParentDragContainerFor(this);
-                if (ddc != nullptr)
+                if (ddc != nullptr && !ddc->isDragAndDropActive())
                     ddc->performExternalDragDropOfFiles({ file.getFullPathName() }, false);
             }
         }
@@ -96,12 +96,9 @@ private:
     std::unique_ptr<DirectDragLabel> dragWavBtn;
     std::unique_ptr<DirectDragLabel> dragMidiBtn;
 
-    // Master Knobs
     juce::Slider warmthSlider;
     juce::Slider spaceSlider;
     juce::Slider filterSlider;
-
-    // Per-Layer Volume Knobs
     juce::Slider layerVolSliders[3];
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> warmthAttach;
