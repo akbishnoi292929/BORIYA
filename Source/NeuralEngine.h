@@ -20,11 +20,10 @@ public:
 
     struct MelodicStep
     {
-        int step = 0;             // 0 to 63 (4-Bar 16th grid)
-        int semitoneOffset = 0;   // Scale offset
+        int step = 0;
+        int semitoneOffset = 0;
         float velocity = 0.95f;
         float pan = 0.0f;
-        int durationSteps = 3;
         bool isTriggered = false;
     };
 
@@ -62,7 +61,6 @@ public:
         return profile;
     }
 
-    // Melodic Hook Architecture (Theme + Variation + Climax + Resolution)
     std::vector<MelodicStep> generateInspiredCadence(const AcousticProfile&, int scaleMode, int seed)
     {
         std::vector<MelodicStep> pattern(64);
@@ -78,38 +76,29 @@ public:
         const int majorScale[7] = { 0, 2, 4, 5, 7, 9, 11 };
         const int* scale = (scaleMode == 1) ? majorScale : minorScale;
 
-        // Structured 4-Bar Melodic Hook Flow
         for (int bar = 0; bar < 4; ++bar)
         {
             int base = bar * 16;
 
-            // Step 1: Root Anchor
             pattern[base].isTriggered = true;
             pattern[base].semitoneOffset = (bar == 3) ? scale[0] : scale[(bar * 2) % 7];
             pattern[base].velocity = 1.0f;
             pattern[base].pan = (bar % 2 == 0) ? -0.15f : 0.15f;
-            pattern[base].durationSteps = 4;
 
-            // Step 2: Melodic Counter
             pattern[base + 3].isTriggered = true;
             pattern[base + 3].semitoneOffset = scale[2];
             pattern[base + 3].velocity = 0.92f;
-            pattern[base + 3].pan = 0.25f;
-            pattern[base + 3].durationSteps = 3;
+            pattern[base + 3].pan = 0.2f;
 
-            // Step 3: Peak Turnaround
             pattern[base + 6].isTriggered = true;
             pattern[base + 6].semitoneOffset = (bar == 2) ? (scale[4] + 12) : scale[4];
             pattern[base + 6].velocity = 0.96f;
             pattern[base + 6].pan = -0.2f;
-            pattern[base + 6].durationSteps = 4;
 
-            // Step 4: Grace Cadence
             pattern[base + 10].isTriggered = true;
             pattern[base + 10].semitoneOffset = (bar == 3) ? scale[0] : scale[(5 + bar) % 7];
             pattern[base + 10].velocity = 0.88f;
-            pattern[base + 10].pan = 0.2f;
-            pattern[base + 10].durationSteps = 4;
+            pattern[base + 10].pan = 0.25f;
         }
 
         return pattern;
