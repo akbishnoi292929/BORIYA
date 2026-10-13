@@ -18,22 +18,26 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
     playBtn.onClick = [this]() { audioProcessor.toggleLoopPlayback(); };
     addAndMakeVisible(playBtn);
 
-    // Direct Drag-and-Drop Buttons to FL Playlist
-    dragWavBtn = std::make_unique<DragButton>("DRAG TO PLAYLIST (WAV)", [this]() {
-        return audioProcessor.exportMixAsWav();
-    });
-    dragWavBtn->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1a3630));
-    dragWavBtn->setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe8c35a));
-    addAndMakeVisible(*dragWavBtn);
+    // Drag / Export Buttons
+    exportWavBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1a3630));
+    exportWavBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe8c35a));
+    exportWavBtn.onClick = [this]() {
+        auto file = audioProcessor.exportMixAsWav();
+        if (file.existsAsFile())
+            file.revealToUser();
+    };
+    addAndMakeVisible(exportWavBtn);
 
-    dragMidiBtn = std::make_unique<DragButton>("DRAG GROOVE (MIDI)", [this]() {
-        return audioProcessor.exportGrooveAsMidi();
-    });
-    dragMidiBtn->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1a3630));
-    dragMidiBtn->setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe8c35a));
-    addAndMakeVisible(*dragMidiBtn);
+    exportMidiBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1a3630));
+    exportMidiBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe8c35a));
+    exportMidiBtn.onClick = [this]() {
+        auto file = audioProcessor.exportGrooveAsMidi();
+        if (file.existsAsFile())
+            file.revealToUser();
+    };
+    addAndMakeVisible(exportMidiBtn);
 
-    // Setup Custom "Ber" Knobs
+    // Knobs
     auto setupSlider = [this](juce::Slider& s) {
         s.setLookAndFeel(&berLookAndFeel);
         s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -63,6 +67,20 @@ BoriyaAudioProcessorEditor::~BoriyaAudioProcessorEditor()
     warmthSlider.setLookAndFeel(nullptr);
     spaceSlider.setLookAndFeel(nullptr);
     filterSlider.setLookAndFeel(nullptr);
+}
+
+void BoriyaAudioProcessorEditor::mouseDrag(const juce::MouseEvent& e)
+{
+    if (exportWavBtn.getBounds().contains(e.getPosition()))
+    {
+        auto file = audioProcessor.exportMixAsWav();
+        if (file.existsAsFile())
+        {
+            juce::DragAndDropContainer* ddc = juce::DragAndDropContainer::findParentDragContainerFor(this);
+            if (ddc != nullptr)
+                ddc->performExternalDragDropOfFiles({ file.getFullPathName() }, false);
+        }
+    }
 }
 
 void BoriyaAudioProcessorEditor::drawWaveform(juce::Graphics& g, const juce::AudioSampleBuffer& buf, juce::Rectangle<int> bounds)
@@ -95,21 +113,17 @@ void BoriyaAudioProcessorEditor::drawWaveform(juce::Graphics& g, const juce::Aud
 
 void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // Deep Emerald Marble Background
     juce::ColourGradient bgGradient(juce::Colour(0xff061614), 0, 0,
                                     juce::Colour(0xff0a2420), 0, (float) getHeight(), false);
     g.setGradientFill(bgGradient);
     g.fillAll();
 
-    // Outer Royal Filigree Border
     g.setColour(juce::Colour(0xffc59b27));
     g.drawRoundedRectangle(10.0f, 10.0f, getWidth() - 20.0f, getHeight() - 20.0f, 12.0f, 1.8f);
 
-    // Inner Inlay
     g.setColour(juce::Colour(0xff0e352f));
     g.drawRoundedRectangle(14.0f, 14.0f, getWidth() - 28.0f, getHeight() - 28.0f, 10.0f, 1.0f);
 
-    // Header Title
     g.setColour(juce::Colour(0xffe8c35a));
     g.setFont(juce::Font(28.0f, juce::Font::bold));
     g.drawText("BORIYA", 35, 20, 200, 32, juce::Justification::left);
@@ -118,7 +132,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setFont(juce::Font(12.0f, juce::Font::plain));
     g.drawText("OG RJ HOOD  |  NEURAL GENERATIVE INSTRUMENT", 35, 48, 380, 20, juce::Justification::left);
 
-    // Sacred Center Neural Lattice[cite: 15]
     float centerX = 430.0f;
     float centerY = 240.0f;
     pulsePhase += 0.04f;
@@ -128,11 +141,9 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     for (int ring = 1; ring <= 3; ++ring)
         g.drawEllipse(centerX - ring * 22, centerY - ring * 22, ring * 44, ring * 44, 1.0f);
 
-    // Central Glowing Boriya Fruit Core[cite: 15]
     g.setColour(juce::Colour(0xffe8c35a).withAlpha(glow));
     g.fillEllipse(centerX - 8, centerY - 8, 16, 16);
 
-    // Layer Slots with Real Waveform Visualizer
     for (int i = 0; i < 3; ++i)
     {
         int yPos = 85 + i * 72;
@@ -156,7 +167,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
         g.drawText(title, 45, yPos + 6, 320, 18, juce::Justification::left);
     }
 
-    // Ber Knobs Golden Labels
     g.setColour(juce::Colour(0xffd4af37));
     g.setFont(juce::Font(11.0f, juce::Font::bold));
     g.drawText("WARMTH", 530, 266, 70, 16, juce::Justification::centred);
@@ -169,10 +179,9 @@ void BoriyaAudioProcessorEditor::resized()
     diceRollBtn.setBounds(525, 45, 220, 42);
     playBtn.setBounds(525, 95, 220, 36);
 
-    dragWavBtn->setBounds(525, 145, 220, 36);
-    dragMidiBtn->setBounds(525, 189, 220, 36);
+    exportWavBtn.setBounds(525, 145, 220, 36);
+    exportMidiBtn.setBounds(525, 189, 220, 36);
 
-    // Ber Shaped Knobs
     warmthSlider.setBounds(530, 285, 70, 75);
     spaceSlider.setBounds(610, 285, 70, 75);
     filterSlider.setBounds(690, 285, 70, 75);
