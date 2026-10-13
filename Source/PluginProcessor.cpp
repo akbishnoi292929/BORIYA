@@ -6,17 +6,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout BoriyaAudioProcessor::create
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{ "WARMTH_DRIVE", 1 }, "Warmth Drive", 0.0f, 1.0f, 0.1f));
+        juce::ParameterID{ "WARMTH_DRIVE", 1 }, "Warmth Drive", 0.0f, 1.0f, 0.15f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{ "SPACE_SIZE", 1 }, "Space Size", 0.0f, 1.0f, 0.45f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{ "SPACE_MIX", 1 }, "Space Mix", 0.0f, 1.0f, 0.2f));
+        juce::ParameterID{ "SPACE_MIX", 1 }, "Space Mix", 0.0f, 1.0f, 0.18f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{ "ANALOG_DELAY", 1 }, "Delay Mix", 0.0f, 1.0f, 0.15f));
+        juce::ParameterID{ "ANALOG_DELAY", 1 }, "Delay Mix", 0.0f, 1.0f, 0.10f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{ "FILTER_FREQ", 1 }, "Filter Freq", 40.0f, 20000.0f, 20000.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{ "MASTER_LEVEL", 1 }, "Master Level", 0.0f, 2.0f, 1.0f));
+        juce::ParameterID{ "MASTER_LEVEL", 1 }, "Master Level", 0.0f, 2.5f, 1.35f));
 
     return { params.begin(), params.end() };
 }
@@ -77,7 +77,6 @@ void BoriyaAudioProcessor::releaseResources()
 
 bool BoriyaAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-    // Pure Generator / Synth (Stereo Output Only)
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
     return true;
@@ -190,7 +189,7 @@ void BoriyaAudioProcessor::renderMelodicPreview()
     if (activeTrack == -1) return;
     const auto& lyr = layers[activeTrack];
 
-    juce::Random rng(1234);
+    juce::Random rng(juce::Time::currentTimeMillis() % 10000);
 
     for (int sIdx = 0; sIdx < 64; ++sIdx)
     {
@@ -205,7 +204,7 @@ void BoriyaAudioProcessor::renderMelodicPreview()
 
             double pRatio = std::pow(2.0, step.semitoneOffset / 12.0);
             int writePos = sIdx * curStepSamples;
-            int renderSamples = std::min(curStepSamples * 4, totalLen - writePos);
+            int renderSamples = std::min(curStepSamples * 5, totalLen - writePos);
             double readPos = startPt;
 
             float panAngle = (step.pan + 1.0f) * 0.25f * juce::MathConstants<float>::pi;
@@ -218,12 +217,13 @@ void BoriyaAudioProcessor::renderMelodicPreview()
                 if (rInt < endPt && rInt < lyr.audioData.getNumSamples() - 1 && writePos + i < totalLen)
                 {
                     float env = 1.0f;
-                    if (i < 120) env = 0.5f * (1.0f - std::cos(juce::MathConstants<float>::pi * i / 120.0f));
-                    else if (renderSamples - i < 800) env = 0.5f * (1.0f - std::cos(juce::MathConstants<float>::pi * (renderSamples - i) / 800.0f));
+                    if (i < 140) env = 0.5f * (1.0f - std::cos(juce::MathConstants<float>::pi * i / 140.0f));
+                    else if (renderSamples - i < 900) env = 0.5f * (1.0f - std::cos(juce::MathConstants<float>::pi * (renderSamples - i) / 900.0f));
 
                     float sL = lyr.audioData.getSample(0, rInt);
                     float sR = (lyr.audioData.getNumChannels() > 1) ? lyr.audioData.getSample(1, rInt) : sL;
-                    float mono = (sL + sR) * 0.5f * step.velocity * env * 0.82f;
+                    // Boosted Level (Loud & Punchy)
+                    float mono = (sL + sR) * 0.85f * step.velocity * env;
 
                     tempBuffer.addSample(0, writePos + i, mono * gL);
                     tempBuffer.addSample(1, writePos + i, mono * gR);
@@ -293,9 +293,7 @@ void BoriyaAudioProcessor::toggleLoopPlayback()
 
 juce::File BoriyaAudioProcessor::exportMixAsWav()
 {
-    juce::int64 ts = juce::Time::currentTimeMillis();
-    auto file = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("BORIYA_Theme_" + juce::String(ts % 10000) + ".wav");
-
+    auto file = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("BORIYA_Theme.wav");
     renderMelodicPreview();
 
     juce::WavAudioFormat wavFmt;
@@ -308,8 +306,7 @@ juce::File BoriyaAudioProcessor::exportMixAsWav()
 
 juce::File BoriyaAudioProcessor::exportGrooveAsMidi()
 {
-    juce::int64 ts = juce::Time::currentTimeMillis();
-    auto file = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("BORIYA_Groove_" + juce::String(ts % 10000) + ".mid");
+    auto file = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("BORIYA_Groove.mid");
 
     juce::MidiFile mf;
     const int tpq = 960;
@@ -331,7 +328,7 @@ juce::File BoriyaAudioProcessor::exportGrooveAsMidi()
             double sTick = static_cast<double>(i * tps);
             double eTick = sTick + (tps * 3);
 
-            seq.addEvent(juce::MidiMessage::noteOn(1, note, static_cast<juce::uint8>(s.velocity * 120.0f)), sTick);
+            seq.addEvent(juce::MidiMessage::noteOn(1, note, static_cast<juce::uint8>(s.velocity * 124.0f)), sTick);
             seq.addEvent(juce::MidiMessage::noteOff(1, note), eTick);
         }
     }
@@ -421,7 +418,7 @@ void BoriyaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                     float s0 = lyr.audioData.getSample(0, rPos);
                     float s1 = lyr.audioData.getSample(0, rPos + 1);
                     float frac = static_cast<float>(v.currentSample - rPos);
-                    float val = (s0 + frac * (s1 - s0)) * v.gain * 0.85f;
+                    float val = (s0 + frac * (s1 - s0)) * v.gain * 1.15f;
 
                     buffer.addSample(0, s, val * v.panL);
                     buffer.addSample(1, s, val * v.panR);
@@ -444,7 +441,7 @@ void BoriyaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 
     if (warmth > 0.01f)
     {
-        float g = 1.0f + warmth * 1.6f;
+        float g = 1.0f + warmth * 1.8f;
         for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
         {
             float* d = buffer.getWritePointer(ch);
@@ -469,6 +466,18 @@ void BoriyaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     }
 
     buffer.applyGain(master);
+
+    // Warm Analog Limiting
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        float* d = buffer.getWritePointer(ch);
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        {
+            float v = d[i];
+            if (std::abs(v) > 0.95f)
+                d[i] = std::copysign(0.95f + 0.04f * std::tanh(std::abs(v) - 0.95f), v);
+        }
+    }
 }
 
 bool BoriyaAudioProcessor::hasEditor() const { return true; }
