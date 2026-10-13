@@ -14,7 +14,6 @@ struct LayerSlot
     int scaleMode = 0;
     float volume = 1.0f;
     bool isLoaded = false;
-    juce::String trackName = "EMPTY";
 };
 
 struct ActiveVoice
@@ -27,8 +26,6 @@ struct ActiveVoice
     float panR = 1.0f;
     bool active = false;
     float gain = 0.0f;
-    float gainTarget = 0.0f;
-    float gainRamp = 0.0f;
 };
 
 class BoriyaAudioProcessor : public juce::AudioProcessor
@@ -66,8 +63,8 @@ public:
     void toggleLoopPlayback();
     bool isLoopPlaying() const { return playingState.load(); }
 
-    juce::File exportMixAsWav();
-    juce::File exportGrooveAsMidi();
+    juce::File getExportWavFile();
+    juce::File getExportMidiFile();
 
     LayerSlot layers[3];
     juce::AudioSampleBuffer masterPreview;
@@ -78,7 +75,6 @@ public:
     int targetScaleMode = 0;
 
     std::atomic<bool> diceRollingState { false };
-    float diceSpinAmount = 0.0f;
     int diceValue = 6;
 
     juce::AudioProcessorValueTreeState apvts;
@@ -101,9 +97,6 @@ private:
     juce::dsp::Reverb spaceReverb;
     juce::dsp::Reverb::Parameters reverbParams;
     juce::dsp::StateVariableTPTFilter<float> masterFilter;
-
-    juce::AudioBuffer<float> delayMemory;
-    int delayWritePos = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BoriyaAudioProcessor)
 };
