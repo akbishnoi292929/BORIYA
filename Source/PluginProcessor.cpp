@@ -27,19 +27,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout BoriyaAudioProcessor::create
 }
 
 BoriyaAudioProcessor::BoriyaAudioProcessor()
-    : AudioProcessor(BusesProperties()
-                        .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+    : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       apvts(*this, nullptr, "BoriyaParams", createParameterLayout())
 {
     formatManager.registerBasicFormats();
-    masterPreview.setSize(2, 44100 * 16);
+    masterPreview.setSize(2, 44100 * 4);
     masterPreview.clear();
 
     for (int i = 0; i < 2; ++i)
-    {
         voices[i].active = false;
-        voices[i].gain = 0.0f;
-    }
 }
 
 BoriyaAudioProcessor::~BoriyaAudioProcessor() {}
@@ -49,17 +45,22 @@ bool BoriyaAudioProcessor::acceptsMidi() const { return true; }
 bool BoriyaAudioProcessor::producesMidi() const { return false; }
 bool BoriyaAudioProcessor::isMidiEffect() const { return false; }
 double BoriyaAudioProcessor::getTailLengthSeconds() const { return 0.0; }
+
+// Safe program returns for FL Studio scanner
 int BoriyaAudioProcessor::getNumPrograms() { return 1; }
 int BoriyaAudioProcessor::getCurrentProgram() { return 0; }
 void BoriyaAudioProcessor::setCurrentProgram(int) {}
-const juce::String BoriyaAudioProcessor::getProgramName(int) { return {}; }
+const juce::String BoriyaAudioProcessor::getProgramName(int) { return "Default"; }
 void BoriyaAudioProcessor::changeProgramName(int, const juce::String&) {}
 
 void BoriyaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    double safeRate = (sampleRate > 8000.0) ? sampleRate : 44100.0;
+    int safeBlock = std::max(16, samplesPerBlock);
+
     juce::dsp::ProcessSpec spec;
-    spec.sampleRate = (sampleRate > 0.0) ? sampleRate : 44100.0;
-    spec.maximumBlockSize = static_cast<juce::uint32>(std::max(32, samplesPerBlock));
+    spec.sampleRate = safeRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(safeBlock);
     spec.numChannels = 2;
 
     spaceReverb.prepare(spec);
@@ -67,29 +68,24 @@ void BoriyaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     masterFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
 
     double sSec = (60.0 / std::max(60, targetBpm)) * 0.25;
-    stepDuration = static_cast<int>(sSec * spec.sampleRate);
+    stepDuration = static_cast<int>(sSec * safeRate);
 
     for (int i = 0; i < 2; ++i)
-    {
         voices[i].active = false;
-        voices[i].gain = 0.0f;
-    }
 }
 
 void BoriyaAudioProcessor::releaseResources()
 {
     spaceReverb.reset();
     masterFilter.reset();
-    for (int i = 0; i < 2; ++i) voices[i].active = false;
+    for (int i = 0; i < 2; ++i)
+        voices[i].active = false;
 }
 
 bool BoriyaAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-    // Strictly Synth: Only Stereo/Mono Output, No Audio Input
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()
-        && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono())
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
-
     return true;
 }
 
@@ -108,7 +104,7 @@ void BoriyaAudioProcessor::calculateTransientSlices(int layerIdx)
     for (int i = 0; i < numCuts; ++i)
         lyr.transientCuts.push_back(i * stepSize);
 
-    double sRate = (getSampleRate() > 0.0) ? getSampleRate() : 44100.0;
+    double sRate = (getSampleRate() > 8000.0) ? getSampleRate() : 44100.0;
     lyr.profile = neuralEngine.analyzeAudioSignal(lyr.audioData.getReadPointer(0),
                                                    std::min(total, 44100 * 2),
                                                    sRate);
@@ -130,7 +126,8 @@ void BoriyaAudioProcessor::loadSampleIntoLayer(int layerIdx, const juce::File& a
 
         triggerMasterGeneration();
         playingState.store(false);
-        for (int i = 0; i < 2; ++i) voices[i].active = false;
+        for (int i = 0; i < 2; ++i)
+            voices[i].active = false;
     }
 }
 
@@ -147,22 +144,18 @@ void BoriyaAudioProcessor::triggerMasterGeneration()
         return;
     }
 
-    diceRollingState.store(true);
-    juce::Random rng;
-    diceValue = 1 + rng.nextInt(6);
-
     int leadLayer = loaded[0];
     const auto& lyr = layers[leadLayer];
 
-    int seedVal = rng.nextInt();
-    activeSteps = neuralEngine.generateInspiredCadence(lyr.profile, targetScaleMode, seedVal);
+    juce::Random rng;
+    activeSteps = neuralEngine.generateInspiredCadence(lyr.profile, targetScaleMode, rng.nextInt());
 
     renderMelodicPreview();
 }
 
 void BoriyaAudioProcessor::renderMelodicPreview()
 {
-    double sRate = (getSampleRate() > 0.0) ? getSampleRate() : 44100.0;
+    double sRate = (getSampleRate() > 8000.0) ? getSampleRate() : 44100.0;
     double stepSec = (60.0 / std::max(60, targetBpm)) * 0.25;
     int curStepSamples = static_cast<int>(stepSec * sRate);
     int totalLen = curStepSamples * 64;
@@ -249,11 +242,7 @@ void BoriyaAudioProcessor::triggerVoice(int layerIdx, int cutIdx, int pitchShift
     int newV = 1 - currentVoice;
     currentVoice = newV;
 
-    if (voices[oldV].active)
-    {
-        voices[oldV].active = false;
-        voices[oldV].gain = 0.0f;
-    }
+    voices[oldV].active = false;
 
     int st = lyr.transientCuts[static_cast<size_t>(cutIdx)];
     int en = (cutIdx + 1 < static_cast<int>(lyr.transientCuts.size())) ? lyr.transientCuts[static_cast<size_t>(cutIdx + 1)] : lyr.audioData.getNumSamples();
@@ -267,9 +256,7 @@ void BoriyaAudioProcessor::triggerVoice(int layerIdx, int cutIdx, int pitchShift
     float panAngle = (pan + 1.0f) * 0.25f * juce::MathConstants<float>::pi;
     v.panL = std::cos(panAngle);
     v.panR = std::sin(panAngle);
-
     v.active = true;
-    v.gain = 1.0f;
 }
 
 void BoriyaAudioProcessor::toggleLoopPlayback()
@@ -278,10 +265,7 @@ void BoriyaAudioProcessor::toggleLoopPlayback()
     playingState.store(next);
 
     for (int i = 0; i < 2; ++i)
-    {
         voices[i].active = false;
-        voices[i].gain = 0.0f;
-    }
     stepClock = 0;
     currentPlayStep = 0;
 }
@@ -364,7 +348,7 @@ void BoriyaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         }
     }
 
-    double sRate = (getSampleRate() > 0.0) ? getSampleRate() : 44100.0;
+    double sRate = (getSampleRate() > 8000.0) ? getSampleRate() : 44100.0;
     double sSec = (60.0 / std::max(60, targetBpm)) * 0.25;
     stepDuration = static_cast<int>(sSec * sRate);
 
