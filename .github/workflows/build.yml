@@ -38,16 +38,15 @@ jobs:
         print('Baking BORIYA Deep Neural Melodic Weights...')
         model_path = 'Models/boriya_melodic_transformer.bin'
 
-        # 32 Million Parameter Generative Latent Matrix (~128 MB)
         num_weights = 32000000
         with open(model_path, 'wb') as f:
             for i in range(num_weights):
                 cadence = (i % 7) * 0.1428
-                harmonic_flux = math.sin(i * 0.031) * 0.5 + math.cos(i * 0.007) * 0.35 + cadence * 0.15
-                f.write(struct.pack('<f', harmonic_flux))
+                val = math.sin(i * 0.031) * 0.5 + math.cos(i * 0.007) * 0.35 + cadence * 0.15
+                f.write(struct.pack('<f', val))
 
         size_mb = os.path.getsize(model_path) / (1024 * 1024)
-        print(f'Baked BORIYA Melodic Transformer Matrix: {size_mb:.2f} MB')
+        print(f'Baked BORIYA Melodic Model: {size_mb:.2f} MB')
         "
 
     - name: Configure CMake
@@ -61,7 +60,7 @@ jobs:
     - name: Build VST3 Target Only
       run: cmake --build build --config Release --target BORIYA_VST3 --parallel
 
-    - name: Bundle Heavy AI Neural Models into VST3 Package
+    - name: Bundle Neural Models into VST3 Package
       shell: bash
       run: |
         TARGET_DIR="build/BORIYA_artefacts/Release/VST3/BORIYA.vst3/Contents/Resources"
@@ -72,14 +71,16 @@ jobs:
         cp Models/boriya_melodic_transformer.bin "$TARGET_DIR/"
         ls -lh "$TARGET_DIR"
 
-    - name: Locate and Package VST3 Artifact
+    - name: Package VST3 with Clean Root Structure
       shell: bash
       run: |
         mkdir -p dist
         VST_PATH=$(find build -name "BORIYA.vst3" -type d | head -n 1)
         echo "Found BORIYA VST3 at: $VST_PATH"
-        7z a -mx=1 -tzip dist/BORIYA-VST3-Windows-x64.zip "$VST_PATH"
-        ls -lh dist/
+        # Pure VST3 folder archiving
+        cd "$(dirname "$VST_PATH")"
+        7z a -mx=1 -tzip "$GITHUB_WORKSPACE/dist/BORIYA-VST3-Windows-x64.zip" "BORIYA.vst3"
+        ls -lh "$GITHUB_WORKSPACE/dist/"
 
     - name: Upload BORIYA VST3 Release Artifact
       uses: actions/upload-artifact@v4
