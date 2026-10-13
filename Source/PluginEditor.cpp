@@ -7,18 +7,21 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
     setSize(780, 480);
 
     // Roll Dice Button
+    diceRollBtn.setButtonText("ROLL");
     diceRollBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffc59b27));
     diceRollBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff091a18));
     diceRollBtn.onClick = [this]() { audioProcessor.triggerMasterGeneration(); };
     addAndMakeVisible(diceRollBtn);
 
     // Playback Button
+    playBtn.setButtonText("PLAY");
     playBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff122b27));
     playBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffd4af37));
     playBtn.onClick = [this]() { audioProcessor.toggleLoopPlayback(); };
     addAndMakeVisible(playBtn);
 
     // Drag / Export Buttons
+    exportWavBtn.setButtonText("WAV");
     exportWavBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1a3630));
     exportWavBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe8c35a));
     exportWavBtn.onClick = [this]() {
@@ -28,6 +31,7 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
     };
     addAndMakeVisible(exportWavBtn);
 
+    exportMidiBtn.setButtonText("MIDI");
     exportMidiBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1a3630));
     exportMidiBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe8c35a));
     exportMidiBtn.onClick = [this]() {
@@ -37,7 +41,7 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
     };
     addAndMakeVisible(exportMidiBtn);
 
-    // Knobs
+    // Custom Ber Knobs
     auto setupSlider = [this](juce::Slider& s) {
         s.setLookAndFeel(&berLookAndFeel);
         s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -118,20 +122,23 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(bgGradient);
     g.fillAll();
 
+    // Outer Royal Filigree Border
     g.setColour(juce::Colour(0xffc59b27));
     g.drawRoundedRectangle(10.0f, 10.0f, getWidth() - 20.0f, getHeight() - 20.0f, 12.0f, 1.8f);
 
     g.setColour(juce::Colour(0xff0e352f));
     g.drawRoundedRectangle(14.0f, 14.0f, getWidth() - 28.0f, getHeight() - 28.0f, 10.0f, 1.0f);
 
+    // CLEAN HEADER: Only BORIYA & OG RJ HOOD
     g.setColour(juce::Colour(0xffe8c35a));
     g.setFont(juce::Font(28.0f, juce::Font::bold));
     g.drawText("BORIYA", 35, 20, 200, 32, juce::Justification::left);
 
     g.setColour(juce::Colour(0xff86ab9f));
     g.setFont(juce::Font(12.0f, juce::Font::plain));
-    g.drawText("OG RJ HOOD  |  NEURAL GENERATIVE INSTRUMENT", 35, 48, 380, 20, juce::Justification::left);
+    g.drawText("OG RJ HOOD", 35, 48, 200, 20, juce::Justification::left);
 
+    // Center Sacred Lattice
     float centerX = 430.0f;
     float centerY = 240.0f;
     pulsePhase += 0.04f;
@@ -144,6 +151,7 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xffe8c35a).withAlpha(glow));
     g.fillEllipse(centerX - 8, centerY - 8, 16, 16);
 
+    // Clean Layer Boxes (DROP HERE)
     for (int i = 0; i < 3; ++i)
     {
         int yPos = 85 + i * 72;
@@ -162,11 +170,12 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
         g.drawRoundedRectangle(box.toFloat(), 6.0f, 1.2f);
 
         g.setColour(juce::Colours::white);
-        g.setFont(juce::Font(12.0f, juce::Font::bold));
-        juce::String title = "LAYER " + juce::String(i + 1) + ": " + (lyr.isLoaded ? lyr.trackName : "DRAG & DROP ACOUSTIC AUDIO");
+        g.setFont(juce::Font(13.0f, juce::Font::bold));
+        juce::String title = lyr.isLoaded ? lyr.trackName : "DROP HERE";
         g.drawText(title, 45, yPos + 6, 320, 18, juce::Justification::left);
     }
 
+    // Knobs Golden Labels
     g.setColour(juce::Colour(0xffd4af37));
     g.setFont(juce::Font(11.0f, juce::Font::bold));
     g.drawText("WARMTH", 530, 266, 70, 16, juce::Justification::centred);
@@ -179,8 +188,8 @@ void BoriyaAudioProcessorEditor::resized()
     diceRollBtn.setBounds(525, 45, 220, 42);
     playBtn.setBounds(525, 95, 220, 36);
 
-    exportWavBtn.setBounds(525, 145, 220, 36);
-    exportMidiBtn.setBounds(525, 189, 220, 36);
+    exportWavBtn.setBounds(525, 145, 105, 36);
+    exportMidiBtn.setBounds(640, 145, 105, 36);
 
     warmthSlider.setBounds(530, 285, 70, 75);
     spaceSlider.setBounds(610, 285, 70, 75);
@@ -189,7 +198,7 @@ void BoriyaAudioProcessorEditor::resized()
 
 void BoriyaAudioProcessorEditor::timerCallback()
 {
-    playBtn.setButtonText(audioProcessor.isLoopPlaying() ? "PAUSE" : "PLAY CADENCE");
+    playBtn.setButtonText(audioProcessor.isLoopPlaying() ? "STOP" : "PLAY");
     repaint();
 }
 
