@@ -4,7 +4,6 @@ project(BORIYA VERSION 1.0.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Enforce Static C++ Runtime (/MT) for Windows 7 64-bit
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 if(NOT TARGET juce::juce_audio_utils)
