@@ -77,7 +77,6 @@ jobs:
         mkdir -p dist
         VST_PATH=$(find build -name "BORIYA.vst3" -type d | head -n 1)
         echo "Found BORIYA VST3 at: $VST_PATH"
-        # Pure VST3 folder archiving
         cd "$(dirname "$VST_PATH")"
         7z a -mx=1 -tzip "$GITHUB_WORKSPACE/dist/BORIYA-VST3-Windows-x64.zip" "BORIYA.vst3"
         ls -lh "$GITHUB_WORKSPACE/dist/"
