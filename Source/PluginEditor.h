@@ -2,6 +2,55 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "PluginProcessor.h"
 
+// Custom Rajasthani Golden Ber (Boriya) Rotary LookAndFeel
+class BoriyaBerLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
+                          float sliderPosProportional, float rotaryStartAngle,
+                          float rotaryEndAngle, juce::Slider&) override
+    {
+        auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(4.0f);
+        auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
+        auto toAngle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
+        auto centre = bounds.getCentre();
+
+        // 1. Subtle Outer Dial Track
+        g.setColour(juce::Colour(0xff091f1b));
+        g.fillEllipse(centre.x - radius, centre.y - radius, radius * 2.0f, radius * 2.0f);
+        
+        g.setColour(juce::Colour(0xff18443b));
+        g.drawEllipse(centre.x - radius, centre.y - radius, radius * 2.0f, radius * 2.0f, 1.5f);
+
+        // Active Golden Fill Arc
+        juce::Path arc;
+        arc.addCentredArc(centre.x, centre.y, radius - 2.0f, radius - 2.0f, 0.0f, rotaryStartAngle, toAngle, true);
+        g.setColour(juce::Colour(0xffd4af37));
+        g.strokePath(arc, juce::PathStrokeType(2.5f));
+
+        // 2. Embossed Golden "Ber" (Boriya) Cap
+        auto berRadius = radius * 0.72f;
+        juce::ColourGradient berGrad(juce::Colour(0xfff3d078), centre.x - berRadius * 0.4f, centre.y - berRadius * 0.4f,
+                                     juce::Colour(0xff8c6218), centre.x + berRadius, centre.y + berRadius, false);
+        g.setGradientFill(berGrad);
+        g.fillEllipse(centre.x - berRadius, centre.y - berRadius, berRadius * 2.0f, berRadius * 2.0f);
+
+        // Ber Golden Rim Border
+        g.setColour(juce::Colour(0xffffe699));
+        g.drawEllipse(centre.x - berRadius, centre.y - berRadius, berRadius * 2.0f, berRadius * 2.0f, 1.2f);
+
+        // 3. Clear Pointer Needle (Taaki ghumne ka andaza turant lage)
+        juce::Path p;
+        auto pointerLength = berRadius * 0.85f;
+        auto pointerThickness = 2.2f;
+        p.addRectangle(-pointerThickness * 0.5f, -berRadius, pointerThickness, pointerLength);
+        p.applyTransform(juce::AffineTransform::rotation(toAngle).translated(centre.x, centre.y));
+
+        g.setColour(juce::Colour(0xff122b27));
+        g.fillPath(p);
+    }
+};
+
 class DragButton : public juce::TextButton
 {
 public:
@@ -51,6 +100,7 @@ private:
     void drawWaveform(juce::Graphics& g, const juce::AudioSampleBuffer& buffer, juce::Rectangle<int> bounds);
 
     BoriyaAudioProcessor& audioProcessor;
+    BoriyaBerLookAndFeel berLookAndFeel;
 
     juce::TextButton diceRollBtn { "ROLL BORIYA" };
     juce::TextButton playBtn { "PLAY / STOP" };
