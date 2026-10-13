@@ -12,7 +12,6 @@ struct LayerSlot
     int bpm = 120;
     int rootKey = 0;
     int scaleMode = 0;
-    float volume = 1.0f;
     bool isLoaded = false;
 };
 
@@ -25,7 +24,6 @@ struct ActiveVoice
     float panL = 1.0f;
     float panR = 1.0f;
     bool active = false;
-    float gain = 0.0f;
 };
 
 class BoriyaAudioProcessor : public juce::AudioProcessor
@@ -73,9 +71,6 @@ public:
     int targetBpm = 130;
     int targetKey = 0;
     int targetScaleMode = 0;
-
-    std::atomic<bool> diceRollingState { false };
-    int diceValue = 6;
 
     juce::AudioProcessorValueTreeState apvts;
     juce::AudioFormatManager formatManager;
