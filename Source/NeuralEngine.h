@@ -20,10 +20,11 @@ public:
 
     struct MelodicStep
     {
-        int step = 0;             // 0 to 63
-        int semitoneOffset = 0;
+        int step = 0;             // 0 to 63 (4-Bar 16th grid)
+        int semitoneOffset = 0;   // Scale offset
         float velocity = 0.95f;
         float pan = 0.0f;
+        int durationSteps = 3;
         bool isTriggered = false;
     };
 
@@ -61,6 +62,7 @@ public:
         return profile;
     }
 
+    // Melodic Hook Architecture (Theme + Variation + Climax + Resolution)
     std::vector<MelodicStep> generateInspiredCadence(const AcousticProfile&, int scaleMode, int seed)
     {
         std::vector<MelodicStep> pattern(64);
@@ -76,74 +78,38 @@ public:
         const int majorScale[7] = { 0, 2, 4, 5, 7, 9, 11 };
         const int* scale = (scaleMode == 1) ? majorScale : minorScale;
 
-        // 6 Different Archetypes for endless dynamic variety
-        int grooveType = rng.nextInt(6);
-
+        // Structured 4-Bar Melodic Hook Flow
         for (int bar = 0; bar < 4; ++bar)
         {
             int base = bar * 16;
-            
-            // Downbeat Foundation
+
+            // Step 1: Root Anchor
             pattern[base].isTriggered = true;
-            pattern[base].semitoneOffset = (bar == 3) ? scale[0] : scale[(bar * 2 + rng.nextInt(2)) % 7];
+            pattern[base].semitoneOffset = (bar == 3) ? scale[0] : scale[(bar * 2) % 7];
             pattern[base].velocity = 1.0f;
             pattern[base].pan = (bar % 2 == 0) ? -0.15f : 0.15f;
+            pattern[base].durationSteps = 4;
 
-            if (grooveType == 0 || grooveType == 2)
-            {
-                // Syncopated Pluck Feel
-                pattern[base + 3].isTriggered = true;
-                pattern[base + 3].semitoneOffset = scale[(2 + bar) % 7];
-                pattern[base + 3].velocity = 0.92f;
-                pattern[base + 3].pan = 0.25f;
+            // Step 2: Melodic Counter
+            pattern[base + 3].isTriggered = true;
+            pattern[base + 3].semitoneOffset = scale[2];
+            pattern[base + 3].velocity = 0.92f;
+            pattern[base + 3].pan = 0.25f;
+            pattern[base + 3].durationSteps = 3;
 
-                pattern[base + 6].isTriggered = true;
-                pattern[base + 6].semitoneOffset = scale[4];
-                pattern[base + 6].velocity = 0.96f;
-                pattern[base + 6].pan = -0.2f;
+            // Step 3: Peak Turnaround
+            pattern[base + 6].isTriggered = true;
+            pattern[base + 6].semitoneOffset = (bar == 2) ? (scale[4] + 12) : scale[4];
+            pattern[base + 6].velocity = 0.96f;
+            pattern[base + 6].pan = -0.2f;
+            pattern[base + 6].durationSteps = 4;
 
-                pattern[base + 10].isTriggered = true;
-                pattern[base + 10].semitoneOffset = (bar == 2) ? scale[4] + 12 : scale[(5 + bar) % 7];
-                pattern[base + 10].velocity = 0.88f;
-                pattern[base + 10].pan = 0.35f;
-            }
-            else if (grooveType == 1 || grooveType == 3)
-            {
-                // Soulful Expressive Flow
-                pattern[base + 4].isTriggered = true;
-                pattern[base + 4].semitoneOffset = scale[(3 + rng.nextInt(3)) % 7];
-                pattern[base + 4].velocity = 0.94f;
-                pattern[base + 4].pan = 0.2f;
-
-                pattern[base + 8].isTriggered = true;
-                pattern[base + 8].semitoneOffset = scale[4] + (bar == 2 ? 12 : 0);
-                pattern[base + 8].velocity = 0.98f;
-                pattern[base + 8].pan = -0.3f;
-
-                pattern[base + 12].isTriggered = true;
-                pattern[base + 12].semitoneOffset = (bar == 3) ? scale[0] : scale[(6 + rng.nextInt(2)) % 7];
-                pattern[base + 12].velocity = 0.90f;
-                pattern[base + 12].pan = 0.1f;
-            }
-            else
-            {
-                // Triplet/Afro Swing Vibe
-                int hit1 = base + 4;
-                int hit2 = base + 7;
-                int hit3 = base + 11;
-
-                pattern[hit1].isTriggered = true;
-                pattern[hit1].semitoneOffset = scale[2];
-                pattern[hit1].velocity = 0.91f;
-
-                pattern[hit2].isTriggered = true;
-                pattern[hit2].semitoneOffset = scale[(4 + bar) % 7];
-                pattern[hit2].velocity = 0.95f;
-
-                pattern[hit3].isTriggered = true;
-                pattern[hit3].semitoneOffset = (bar == 3) ? scale[0] : scale[(1 + bar) % 7];
-                pattern[hit3].velocity = 0.89f;
-            }
+            // Step 4: Grace Cadence
+            pattern[base + 10].isTriggered = true;
+            pattern[base + 10].semitoneOffset = (bar == 3) ? scale[0] : scale[(5 + bar) % 7];
+            pattern[base + 10].velocity = 0.88f;
+            pattern[base + 10].pan = 0.2f;
+            pattern[base + 10].durationSteps = 4;
         }
 
         return pattern;
