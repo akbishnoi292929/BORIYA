@@ -5,22 +5,17 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
     setSize(800, 520);
-    setWantsKeyboardFocus(true);
-    addKeyListener(this);
 
-    // Roll Button
     diceRollBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffc59b27));
     diceRollBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff091a18));
     diceRollBtn.onClick = [this]() { audioProcessor.triggerMasterGeneration(); };
     addAndMakeVisible(diceRollBtn);
 
-    // Play/Stop Button
     playBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff122b27));
     playBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffd4af37));
     playBtn.onClick = [this]() { audioProcessor.toggleLoopPlayback(); };
     addAndMakeVisible(playBtn);
 
-    // PURE DRAG LABELS (CLICK KARTE HI PLAYLIST PAR DROP HOTI HAI, EXPLORER NAHI KHULTA)
     dragWavBtn = std::make_unique<DirectDragLabel>("WAV", [this]() {
         return audioProcessor.getExportWavFile();
     });
@@ -31,7 +26,6 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
     });
     addAndMakeVisible(*dragMidiBtn);
 
-    // Master Knobs
     auto setupMasterSlider = [this](juce::Slider& s) {
         s.setLookAndFeel(&berLookAndFeel);
         s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -50,7 +44,6 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
     filterAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.apvts, "FILTER_FREQ", filterSlider);
 
-    // Har Layer Ka Volume Slider
     const char* paramIds[3] = { "LAYER1_VOL", "LAYER2_VOL", "LAYER3_VOL" };
     for (int i = 0; i < 3; ++i)
     {
@@ -64,6 +57,8 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
             audioProcessor.apvts, paramIds[i], s);
     }
 
+    setWantsKeyboardFocus(true);
+    addKeyListener(this);
     startTimerHz(30);
 }
 
@@ -120,11 +115,9 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(bgGradient);
     g.fillAll();
 
-    // Royal Borders
     g.setColour(juce::Colour(0xffc59b27));
     g.drawRoundedRectangle(10.0f, 10.0f, getWidth() - 20.0f, getHeight() - 20.0f, 12.0f, 1.8f);
 
-    // Minimal Header (Sirf BORIYA & OG RJ HOOD)
     g.setColour(juce::Colour(0xffe8c35a));
     g.setFont(juce::Font(28.0f, juce::Font::bold));
     g.drawText("BORIYA", 35, 18, 200, 32, juce::Justification::left);
@@ -133,7 +126,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setFont(juce::Font(12.0f, juce::Font::plain));
     g.drawText("OG RJ HOOD", 35, 46, 200, 18, juce::Justification::left);
 
-    // Sacred Center Glow
     float centerX = 445.0f;
     float centerY = 240.0f;
     pulsePhase += 0.04f;
@@ -146,7 +138,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xffe8c35a).withAlpha(glow));
     g.fillEllipse(centerX - 7, centerY - 7, 14, 14);
 
-    // 3 INPUT LAYERS (NO SAMPLE NAME TEXT, SIRF CLEAN WAVEFORM & DROP HERE)
     for (int i = 0; i < 3; ++i)
     {
         int yPos = 78 + i * 78;
@@ -171,7 +162,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
         g.drawRoundedRectangle(box.toFloat(), 6.0f, 1.2f);
     }
 
-    // 4TH LAYER: FINAL GENERATED OUTPUT WAVEFORM LAYER
     int outY = 78 + 3 * 78 + 4;
     juce::Rectangle<int> outBox(35, outY, 395, 78);
     g.setColour(juce::Colour(0xff071513));
@@ -191,7 +181,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xffc59b27));
     g.drawRoundedRectangle(outBox.toFloat(), 6.0f, 1.5f);
 
-    // Master Knobs Labels
     g.setColour(juce::Colour(0xffd4af37));
     g.setFont(juce::Font(11.0f, juce::Font::bold));
     g.drawText("WARMTH", 535, 290, 65, 14, juce::Justification::centred);
@@ -201,21 +190,18 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
 
 void BoriyaAudioProcessorEditor::resized()
 {
-    // Right Side Action Buttons
     diceRollBtn.setBounds(535, 45, 225, 44);
     playBtn.setBounds(535, 96, 225, 38);
 
     dragWavBtn->setBounds(535, 142, 108, 36);
     dragMidiBtn->setBounds(652, 142, 108, 36);
 
-    // Layer Volume Knobs (Har layer box ke theek bagal mein)
     for (int i = 0; i < 3; ++i)
     {
         int yPos = 78 + i * 78 + 9;
         layerVolSliders[i].setBounds(372, yPos, 50, 50);
     }
 
-    // Master Knobs
     warmthSlider.setBounds(535, 310, 65, 65);
     spaceSlider.setBounds(615, 310, 65, 65);
     filterSlider.setBounds(695, 310, 65, 65);
