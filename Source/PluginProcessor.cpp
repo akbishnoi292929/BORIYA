@@ -16,7 +16,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout BoriyaAudioProcessor::create
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{ "MASTER_LEVEL", 1 }, "Level", 0.0f, 2.0f, 1.0f));
 
-    // Per-Layer Volume Parameters
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{ "LAYER1_VOL", 1 }, "Layer 1 Vol", 0.0f, 1.5f, 1.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -28,7 +27,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout BoriyaAudioProcessor::create
 }
 
 BoriyaAudioProcessor::BoriyaAudioProcessor()
-    : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+    : AudioProcessor(BusesProperties()
+                        .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       apvts(*this, nullptr, "BoriyaParams", createParameterLayout())
 {
     formatManager.registerBasicFormats();
@@ -46,7 +46,7 @@ BoriyaAudioProcessor::~BoriyaAudioProcessor() {}
 
 const juce::String BoriyaAudioProcessor::getName() const { return "BORIYA"; }
 bool BoriyaAudioProcessor::acceptsMidi() const { return true; }
-bool BoriyaAudioProcessor::producesMidi() const { return true; }
+bool BoriyaAudioProcessor::producesMidi() const { return false; }
 bool BoriyaAudioProcessor::isMidiEffect() const { return false; }
 double BoriyaAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 int BoriyaAudioProcessor::getNumPrograms() { return 1; }
@@ -85,8 +85,11 @@ void BoriyaAudioProcessor::releaseResources()
 
 bool BoriyaAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    // Strictly Synth: Only Stereo/Mono Output, No Audio Input
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()
+        && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono())
         return false;
+
     return true;
 }
 
@@ -187,7 +190,7 @@ void BoriyaAudioProcessor::renderMelodicPreview()
     if (activeTrack == -1) return;
     const auto& lyr = layers[activeTrack];
 
-    juce::Random rng(juce::Time::currentTimeMillis() % 10000);
+    juce::Random rng(1234);
 
     for (int sIdx = 0; sIdx < 64; ++sIdx)
     {
@@ -466,7 +469,7 @@ juce::AudioProcessorEditor* BoriyaAudioProcessor::createEditor()
 void BoriyaAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
-    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    std::unique_ptr<juce::XmlElement> xml (state.createXml());
     copyXmlToBinary(*xml, destData);
 }
 
