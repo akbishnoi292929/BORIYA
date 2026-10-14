@@ -27,7 +27,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout BoriyaAudioProcessor::create
 }
 
 BoriyaAudioProcessor::BoriyaAudioProcessor()
-    : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+    : AudioProcessor(BusesProperties()
+                        .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       apvts(*this, nullptr, "BoriyaParams", createParameterLayout())
 {
     formatManager.registerBasicFormats();
@@ -46,7 +47,6 @@ bool BoriyaAudioProcessor::producesMidi() const { return false; }
 bool BoriyaAudioProcessor::isMidiEffect() const { return false; }
 double BoriyaAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
-// Safe program returns for FL Studio scanner
 int BoriyaAudioProcessor::getNumPrograms() { return 1; }
 int BoriyaAudioProcessor::getCurrentProgram() { return 0; }
 void BoriyaAudioProcessor::setCurrentProgram(int) {}
@@ -84,8 +84,10 @@ void BoriyaAudioProcessor::releaseResources()
 
 bool BoriyaAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo() &&
+        layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono())
         return false;
+
     return true;
 }
 
