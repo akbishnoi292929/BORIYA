@@ -82,10 +82,15 @@ void BoriyaAudioProcessor::releaseResources()
         voices[i].active = false;
 }
 
+// 100% FL Studio Compatible Bus Layout (Handles both mono & stereo inquiries cleanly)
 bool BoriyaAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo() &&
-        layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono())
+    const auto& mainOutput = layouts.getMainOutputChannelSet();
+
+    if (mainOutput != juce::AudioChannelSet::mono() && mainOutput != juce::AudioChannelSet::stereo())
+        return false;
+
+    if (!layouts.getMainInputChannelSet().isDisabled())
         return false;
 
     return true;
