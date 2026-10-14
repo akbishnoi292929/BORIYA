@@ -18,7 +18,7 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
     playBtn.onClick = [this]() { audioProcessor.toggleLoopPlayback(); };
     addAndMakeVisible(playBtn);
 
-    // Direct Drag Labels (No popups)
+    // Direct Drag Labels
     dragWavBtn = std::make_unique<DirectDragLabel>("WAV", [this]() {
         return audioProcessor.getExportWavFile();
     });
@@ -29,7 +29,7 @@ BoriyaAudioProcessorEditor::BoriyaAudioProcessorEditor(BoriyaAudioProcessor& p)
     });
     addAndMakeVisible(*dragMidiBtn);
 
-    // Setup Master Sliders
+    // Master Knobs
     auto setupMasterSlider = [this](juce::Slider& s) {
         s.setLookAndFeel(&berLookAndFeel);
         s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -117,11 +117,9 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(bgGradient);
     g.fillAll();
 
-    // Borders
     g.setColour(juce::Colour(0xffc59b27));
     g.drawRoundedRectangle(10.0f, 10.0f, getWidth() - 20.0f, getHeight() - 20.0f, 12.0f, 1.8f);
 
-    // Minimal Header
     g.setColour(juce::Colour(0xffe8c35a));
     g.setFont(juce::Font(28.0f, juce::Font::bold));
     g.drawText("BORIYA", 35, 18, 200, 32, juce::Justification::left);
@@ -130,7 +128,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setFont(juce::Font(12.0f, juce::Font::plain));
     g.drawText("OG RJ HOOD", 35, 46, 200, 18, juce::Justification::left);
 
-    // Sacred Center Glow
     float centerX = 445.0f;
     float centerY = 240.0f;
     pulsePhase += 0.04f;
@@ -143,7 +140,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xffe8c35a).withAlpha(glow));
     g.fillEllipse(centerX - 7, centerY - 7, 14, 14);
 
-    // 3 Input Layer Boxes
     for (int i = 0; i < 3; ++i)
     {
         int yPos = 78 + i * 78;
@@ -168,7 +164,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
         g.drawRoundedRectangle(box.toFloat(), 6.0f, 1.2f);
     }
 
-    // 4th Layer: Output Waveform
     int outY = 78 + 3 * 78 + 4;
     juce::Rectangle<int> outBox(35, outY, 395, 78);
     g.setColour(juce::Colour(0xff071513));
@@ -188,7 +183,6 @@ void BoriyaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xffc59b27));
     g.drawRoundedRectangle(outBox.toFloat(), 6.0f, 1.5f);
 
-    // Master Knobs Labels
     g.setColour(juce::Colour(0xffd4af37));
     g.setFont(juce::Font(11.0f, juce::Font::bold));
     g.drawText("WARMTH", 535, 290, 65, 14, juce::Justification::centred);
